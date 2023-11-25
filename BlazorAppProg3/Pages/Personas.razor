@@ -1,0 +1,260 @@
+﻿@page "/personas"
+@using Data.Models;
+@inject Data.Services.PersonasServices services
+@inject SweetAlertService Swal
+@inject NavigationManager navigationamangeer
+<h1 style="font-family:Georgia, 'Times New Roman', Times, serif;color:orangered">
+    Visualizar Usuarios
+</h1>
+<a class=" btn btn-info" href="/evento_home" style="margin:10px">Volver</a>
+
+<div>
+    <button class="btn btn-primary" style="margin:10px" @onclick="OpenAddStudent">Nuevo Usuario</button>
+</div>
+<div class="container-fluid">
+    @if (model == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <table class="table table-bordered">
+            <thead style="background-color:aqua; font-size:16px; font-family:'Times New Roman', Times, serif; width:100%">
+                <tr>
+                    <th>Nombre</th>
+                    <th>Email</th>
+                    <th>Telefono</th>
+                    <th>IsAvaible</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var listado in model)
+                {
+                    <tr>
+                        <td>@listado.Nombre</td>
+                        <td>@listado.Email</td>
+                        <td>@listado.Telefono</td>
+                        <td>@listado.IsActive</td>
+                        <td>
+                            <input type="button" class="btn btn-secondary" @onclick="@(() => OpenEditUser(listado.Id))" value="Editar" />
+                            <nbsp></nbsp>
+                            <input type="button" class="btn btn-warning" @onclick="() => Eliminar(listado.Id)" value="Eliminar" />
+                        </td>
+
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    @if (showBackdrop)
+    {
+        <div class="modal-backdrop fade show"></div>
+    }
+    <div class="modal @modalClass" tabindex="-1" role="dialog" style="display:@modalDisplay; overflow-y: auto;">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        @{
+                            var txt = "";
+                            if ((personasmodel.Id == 0 | (personasmodel.Id == null)))
+                            {
+                                txt = "Añadir Nuevo Usuario";
+                                @txt
+                                ;
+
+                            }
+                            else
+                            {
+                                txt = "Editar un Usuario";
+                                @txt
+                                ;
+                            }
+                        }
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group row">
+                        <input @bind="personasmodel.Id" type="hidden" class="col-sm-4 form-control" />
+                    </div>
+                    <div class="form-group row">
+                        <label for="@personasmodel.Nombre" class="col-sm-8 col-form-label">Email:</label>
+                        <input type="text" @bind="personasmodel.Nombre" class="col-sm-4 form-control" placeholder="Name of Example" />
+                    </div>
+                    <div class="form-group row">
+                        <label for="@personasmodel.Email" class="col-sm-8 col-form-label">Name:</label>
+                        <input type="email" @bind="personasmodel.Email" class="col-sm-4 form-control" placeholder="example@gmail.com" />
+                    </div>
+                    <div class="form-group row">
+                    <label for="@personasmodel.Telefono" class="col-sm-8 col-form-label">Name:</label>
+                    <input type="text" @bind="personasmodel.Telefono" class="col-sm-4 form-control" placeholder="000-000-0000" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    @{
+                        if ((personasmodel.Id == 0 | (personasmodel.Id == null)))
+                        {
+                            <input type="button" class="btn btn-primary" @onclick="async () => await AddStudentAction()" value="Guardar" />
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-primary" @onclick="async () => await UpdateUser(personasmodel.Id)">Editar</button>
+                        }
+                    }
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" @onclick="() => this.Close()">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    private List<PersonasModel> model;
+    private PersonasModel personasmodel = new PersonasModel();
+    private string modalDisplay = "none;";
+    private string modalClass = "";
+    private bool showBackdrop = false;
+    protected override void OnInitialized()
+    {
+        model = services.GetAll();
+    }
+    public void Open()
+    {
+        modalDisplay = "block;";
+        modalClass = "show";
+        showBackdrop = true;
+    }
+    public void Close()
+    {
+        modalDisplay = "none";
+        modalClass = "";
+        showBackdrop = false;
+    }
+    protected void OpenAddStudent()
+    {
+        personasmodel.Id = 0;
+        personasmodel.Nombre = "";
+        personasmodel.Email = "";
+        personasmodel.Telefono = "";
+        personasmodel.IsActive = true;
+        this.Open();
+    }
+    protected void OpenEditUser(int myID)
+    {
+        var myQuery = (from s in services.GetAll() where s.Id == myID select s).Single();
+        this.personasmodel.Id = myQuery.Id;
+        this.personasmodel.Nombre = myQuery.Nombre;
+        this.personasmodel.Email = myQuery.Email;
+        this.personasmodel.Telefono = myQuery.Telefono;
+        this.personasmodel.IsActive = myQuery.IsActive;
+        this.Open();
+    }
+    protected async Task AddStudentAction()
+    {
+        var save = new PersonasModel();
+        try
+        {
+            var getlist = services.GetAll();
+            save.Nombre = personasmodel.Nombre;
+            save.Email = personasmodel.Email;
+            save.Telefono = personasmodel.Telefono;
+            save.IsActive = personasmodel.IsActive;
+            services.Save(save);
+            services.SaveChanges();
+            SweetAlertResult resultado = await Swal.FireAsync(new SweetAlertOptions
+                {
+                    Title = "Success",
+                    Text = "Se ha guardado correctamente",
+                    Icon = SweetAlertIcon.Success,
+                    ShowCancelButton = false,
+                    ConfirmButtonText = "OK"
+                });
+
+            this.Close();
+        }
+        catch (Exception)
+        {
+        }
+        await InvokeAsync(() =>
+        {
+            StateHasChanged();
+            this.OnInitialized();
+        });
+
+    }
+    protected async Task UpdateUser(int myID)
+    {
+        var myQuery = (from d in services.GetAll() where d.Id == myID select d).Single();
+        myQuery.Nombre = this.personasmodel.Nombre;
+        myQuery.Email = this.personasmodel.Email;
+        myQuery.Telefono = this.personasmodel.Telefono;
+        myQuery.IsActive = this.personasmodel.IsActive;
+        services.Update(myQuery);
+        services.SaveChanges();
+        SweetAlertResult resultado = await Swal.FireAsync(new SweetAlertOptions
+            {
+                Title = "Success",
+                Text = "Se ha editado correctamente",
+                Icon = SweetAlertIcon.Success,
+                ShowCancelButton = false,
+                ConfirmButtonText = "OK"
+            });
+        this.Close();
+        await InvokeAsync(() =>
+        {
+            StateHasChanged();
+            this.OnInitialized();
+        });
+    }
+    public async void Eliminar(int id)
+    {
+        SweetAlertResult result = await Swal.FireAsync(new SweetAlertOptions
+            {
+                Title = "Warnings",
+                Text = "Desea eliminar este usuario?",
+                Icon = SweetAlertIcon.Warning,
+                ShowCancelButton = true,
+                ConfirmButtonText = "OK"
+            });
+
+        if (result.IsConfirmed)
+        {
+            try
+            {
+                personasmodel = services.GetEntity(id);
+                services.Remove(personasmodel);
+                SweetAlertResult resultado = await Swal.FireAsync(new SweetAlertOptions
+                    {
+                        Title = "Succes",
+                        Text = "El usuario se ha eliminado correctamente",
+                        Icon = SweetAlertIcon.Success,
+                        ShowCancelButton = false,
+                        ConfirmButtonText = "OK"
+                    });
+                await InvokeAsync(() =>
+                 {
+                     StateHasChanged();
+                     this.OnInitialized();
+                 });
+
+            }
+            catch (Exception)
+            {
+                SweetAlertResult resultado = await Swal.FireAsync(new SweetAlertOptions
+                    {
+                        Title = "FAILED",
+                        Text = "Ha ocurrido un error eliminando el usuario",
+                        Icon = SweetAlertIcon.Error,
+                        ShowCancelButton = false,
+                        ConfirmButtonText = "OK"
+                    });
+            }
+        }
+    }
+}
+
